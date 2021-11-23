@@ -326,9 +326,6 @@ is_orthogonal_basis(const double freq_u1, const double freq_u2, const double T)
     ss.str("");
   }
 
-  std::cout << "{" << Norm(samples_f1).result() <<"; "
-    << Norm(samples_f2).result() << "} ";
-
   ScalarProduct scalarProduct(samples_f1, samples_f2);
 
   return (Norm(samples_f1).result() - 1 == 0) 
