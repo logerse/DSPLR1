@@ -1,3 +1,4 @@
+#include <map>
 #include <cmath>
 #include <functional>
 #include <fstream>
@@ -20,6 +21,10 @@ static void   norm_mode(const int argc, const char **argv);
 static void   ort_mode(const int argc, const char **argv);
 static void   orthogonal_analitic(const std::string &f1, const std::string &f2);
 static bool   is_orthogonal_basis(const double, const double, const double);
+static void   discrete_mode(const int argc, const char **argv);
+static void   sample_and_save(const double f, const double T, const std::string &res_filename);
+static bool   save_as_file(const std::vector<std::pair<double, double>> &samples, const double f, const double T, const std::string &filename);
+static std::vector<std::pair<double, double>>   time_discretization(const std::vector<std::pair<double, double>> &samples, const double dt1, const double dt2);
 
 
 class Sin : public IFunction {
@@ -100,7 +105,7 @@ sampler_mode(const int argc, const char **argv)
   res2.close();
 }
 
-/* func1.txt func2.txt */
+
 static void
 scal_prod_mode(const int argc, const char **argv)
 {
@@ -334,6 +339,98 @@ is_orthogonal_basis(const double freq_u1, const double freq_u2, const double T)
 }
 
 
+static void
+discrete_mode(const int argc, const char **argv)
+{
+  std::stringstream help_msg;
+  help_msg << "[*] Usage: " << std::string(*argv) 
+    << " discrete F"
+    << std::endl;
+
+  if (argc != 3) {
+    std::cout << "Incorrect count of arguments for this mode." << std::endl;
+    std::cout << help_msg.str() << std::endl;
+    return;
+  }
+
+  double f;
+  try {
+    f = std::stod(argv[2]);
+  } catch (std::exception &e) {
+    std::cout << "Incorrect value of frequense." << std::endl;
+    std::cout << help_msg.str() << std::endl;
+    return;
+  }
+
+  try {
+    sample_and_save(1.5*f, 10/f, "/tmp/discrete_1.5.dat");
+    sample_and_save(1.75*f, 10/f, "/tmp/discrete_1.75.dat");
+    sample_and_save(2*f, 10/f, "/tmp/discrete_2.dat");
+    sample_and_save(3*f, 10/f, "/tmp/discrete_3.dat");
+    sample_and_save(1000*f, 10/f, "/tmp/discrete_1000.dat");
+  } catch (std::runtime_error &e) {
+    std::cout << e.what() << std::endl;
+    return;
+  }
+
+  std::cout << "Success! Samples has been out in result files." << std::endl;
+}
+
+
+static void
+sample_and_save(const double f, const double T, const std::string &res_filename)
+{
+  Sin u{f};
+  Sampler sampler{T, u};
+  const auto samples = sampler();
+  if (!save_as_file(samples, f, T, res_filename))
+    throw std::runtime_error(std::string("Can't save result of sampling; ")+res_filename);
+
+  const auto discret_samples = time_discretization(samples, 1/f, 1/(f*3000));
+  if (!save_as_file(discret_samples, f, T, res_filename+".kot"))
+    throw std::runtime_error(std::string("Can't save result of sampling; ")+res_filename);
+}
+
+
+static bool
+save_as_file(const std::vector<std::pair<double, double>> &samples, const double f, const double T, const std::string &filename)
+{
+  std::ofstream result;
+  result.open(filename);
+  if (result.bad())
+    return false;
+
+  for (auto &v : samples)
+    result << v.first << "\t" << v.second << std::endl;
+
+  result << f << ";" << T << std::endl;
+  result.close();
+  return true;
+}
+
+
+static std::vector<std::pair<double, double>>
+time_discretization(const std::vector<std::pair<double, double>> &samples, const double dt1, const double dt2)
+{
+  std::size_t count = samples.size() * (dt1/dt2);
+  std::vector<std::pair<double, double>> result{count};
+  for (std::size_t i = 0; i < count; ++i)
+  {
+    double sum = 0;
+    double t = i * dt2;
+    for (std::size_t j = 0; j < samples.size(); ++j) 
+    {
+      double k = M_PI * (t/dt1 - j);
+      sum += (k == 0 ? samples[j].second : samples[j].second * (std::sin(k)/k));
+    }
+
+    result[i].first = t;
+    result[i].second = sum;
+  }
+
+  return result;
+}
+
 
 int 
 main(const int argc, const char **argv) 
@@ -343,15 +440,15 @@ main(const int argc, const char **argv)
 
   const std::string mode{argv[1]};
   if (mode == "sampler")
-  {
     sampler_mode(argc, argv);
-  } else if (mode == "scalar_product") {
+  else if (mode == "scalar_product")
     scal_prod_mode(argc, argv);
-  } else if (mode == "norm") {
+  else if (mode == "norm")
     norm_mode(argc, argv);
-  } else if (mode == "ort") {
+  else if(mode == "ort")
     ort_mode(argc, argv);
-  } else {
+  else if(mode == "discrete")
+    discrete_mode(argc, argv);
+  else
     print_help_and_exit(*argv);
-  }
 }
