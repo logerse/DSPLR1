@@ -85,7 +85,7 @@ const
 
         double supl;
         unsigned int border = (is_width) ? this->width() : this->height();
-        for (unsigned int  i = 0; i < this->width();  ++i)
+        for (unsigned int  i = 0; i < border;  ++i)
         {
             if (is_width)
                 image_->get_pixel(i, row, old_color);
