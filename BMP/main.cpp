@@ -4,8 +4,8 @@
 
 
 
-static double n = 0.5;
-static double m = 0.5;
+static double n = 20.0/40;
+static double m = 20.0/40;
 
 static void help(const char *);
 

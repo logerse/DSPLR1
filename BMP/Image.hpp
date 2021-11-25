@@ -19,6 +19,7 @@ public:
 
 private:
         rgb_t new_color(const unsigned int, const unsigned int, const bitmap_image&, bool is_width=true) const;
+        bitmap_image resize(const unsigned int, const unsigned int, const bool) const;
 
 private:
         const std::string name_;
