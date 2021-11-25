@@ -1,6 +1,7 @@
 #include <future>
 #include <iostream>
 #include "Image.hpp"
+#include "io_context_group.hpp"
 
 
 
@@ -77,15 +78,10 @@ const
             c.r += old_color.red * supl;
             c.g += old_color.green * supl;
             c.b += old_color.blue * supl;
-            /*
-            new_color.red += old_color.red * supl;
-            new_color.green += old_color.green * supl;
-            new_color.blue += old_color.blue * supl;
-            */
         }
-        new_color.red = (c.r);
-        new_color.green = (c.g);
-        new_color.blue = (c.b);
+        new_color.red = c.r;
+        new_color.green = c.g;
+        new_color.blue = c.b;
         return new_color;
 }
 
@@ -94,19 +90,24 @@ bitmap_image
 Image::resize(const unsigned int w, const unsigned int h, const bool is_width_resize)
 const
 {
+        io_context_group iog{std::thread::hardware_concurrency()};
         rgb_t new_color;
         bitmap_image result(w, h);
         for (unsigned int row = 0; row < result.height(); ++row)
-            for (unsigned int column = 0; column < result.width(); ++column)
-            {
-                new_color = this->new_color(row, column, result, is_width_resize);
-                /*
-                new_color.red = std::abs(new_color.red);
-                new_color.green = std::abs(new_color.green);
-                new_color.blue = std::abs(new_color.blue);
-                */
-                result.set_pixel(column, row, new_color);
-            }
+            boost::asio::post(iog.query(), 
+                [&, row] () {
+                for (unsigned int column = 0; column < result.width(); ++column)
+                {
+                    new_color = this->new_color(row, column, result, is_width_resize);
+                    /*
+                    new_color.red = std::abs(new_color.red);
+                    new_color.green = std::abs(new_color.green);
+                    new_color.blue = std::abs(new_color.blue);
+                    */
+                    result.set_pixel(column, row, new_color);
+                }
+            });
+        iog.run();
         return result;
 }
 
